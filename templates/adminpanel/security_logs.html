@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Security Logs - AI Auth System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <h1><i class="fas fa-shield-alt me-2"></i>Security Logs</h1>
+    </div>
+
+    <div class="card mb-4" style="border-radius: 15px; border: none;">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="type" class="form-label">Log Type</label>
+                    <select name="type" class="form-select">
+                        <option value="all">All Events</option>
+                        <option value="failed" {% if log_type == 'failed' %}selected{% endif %}>Failed Logins</option>
+                        <option value="suspicious" {% if log_type == 'suspicious' %}selected{% endif %}>Suspicious Logins</option>
+                        <option value="otp" {% if log_type == 'otp' %}selected{% endif %}>OTP Attempts</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="days" class="form-label">Time Range</label>
+                    <select name="days" class="form-select">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 Days</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 Days</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 Days</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i> Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card" style="border-radius: 15px; border: none;">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Email</th>
+                        <th>IP Address</th>
+                        <th>Status</th>
+                        <th>Risk Level</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"M d, Y g:i A" }}</td>
+                        <td>{{ log.email }}</td>
+                        <td><code>{{ log.ip_address }}</code></td>
+                        <td>
+                            {% if log.status == 'failed' %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% elif log.status == 'otp_required' %}
+                                <span class="badge bg-warning">OTP Required</span>
+                            {% else %}
+                                <span class="badge bg-success">{{ log.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.risk_level == 'high' or log.risk_level == 'critical' %}
+                                <span class="badge bg-danger">{{ log.risk_level }}</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ log.risk_level }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ log.device }} / {{ log.browser }}<br>
+                            Trust: {{ log.trust_score|floatformat:0 }}%</small>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No security events found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

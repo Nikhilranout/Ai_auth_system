@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+
+{% block title %}Behavior Analytics - AI Auth System{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-bar me-2"></i>Behavior Analytics</h1>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card border-left-primary text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-keyboard text-primary mb-2"></i>
+                    <h6 class="text-muted mb-1">Avg Typing Speed</h6>
+                    <h3 class="text-primary mb-0">{{ avg_typing_speed|floatformat:1 }}</h3>
+                    <small class="text-muted">chars/sec</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-info text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-mouse text-info mb-2"></i>
+                    <h6 class="text-muted mb-1">Avg Mouse Speed</h6>
+                    <h3 class="text-info mb-0">{{ avg_mouse_speed|floatformat:1 }}</h3>
+                    <small class="text-muted">px/sec</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-success text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-star text-success mb-2"></i>
+                    <h6 class="text-muted mb-1">Avg Trust Score</h6>
+                    <h3 class="text-success mb-0">{{ avg_trust_score|floatformat:1 }}%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-left-warning text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
+                    <h6 class="text-muted mb-1">Suspicious</h6>
+                    <h3 class="text-warning mb-0">{{ suspicious_attempts }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6 class="text-muted">Avg Hold / Flight Time</h6>
+                    <h3 class="text-secondary">{{ avg_hold_time|floatformat:0 }} / {{ avg_flight_time|floatformat:0 }}</h3>
+                    <small class="text-muted">milliseconds</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Recognized Device History</h6>
+                    {% for device, count in device_history.items %}
+                    <div class="d-flex justify-content-between">
+                        <span>{{ device|default:"Unknown" }}</span>
+                        <strong>{{ count }}</strong>
+                    </div>
+                    {% empty %}
+                    <p class="mb-0 text-muted">No device history yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Risk Level Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="riskChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Trust Score Trend</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="trustChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Behavior History</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Typing Speed</th>
+                                <th>Mouse Speed</th>
+                                <th>Trust Score</th>
+                                <th>Risk Level</th>
+                                <th>Device</th>
+                                <th>Pattern Match</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in behavior_logs %}
+                            <tr>
+                                <td>{{ log.created_at|date:"M d, g:i A" }}</td>
+                                <td>{{ log.typing_speed|floatformat:1 }}</td>
+                                <td>{{ log.mouse_speed|floatformat:1 }}</td>
+                                <td>{{ log.trust_score|floatformat:1 }}%</td>
+                                <td><span class="badge bg-{{ log.risk_level|lower }}">{{ log.risk_level }}</span></td>
+                                <td>{{ log.device_type }}</td>
+                                <td>{{ log.prediction_label|default:"Pending" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ risk_counts|json_script:"analytics-risk-counts" }}
+{{ behavior_logs_trust|json_script:"analytics-trust-data" }}
+
+<script>
+var riskCountsData = JSON.parse(document.getElementById('analytics-risk-counts').textContent);
+var trustDataRaw = JSON.parse(document.getElementById('analytics-trust-data').textContent);
+
+// Risk distribution chart
+var riskCtx = document.getElementById('riskChart').getContext('2d');
+var riskLabels = ['low', 'medium', 'high', 'critical'];
+var riskData = riskLabels.map(function(l) { return riskCountsData[l] || 0; });
+var riskDisplayLabels = riskLabels.map(function(l) { return l.charAt(0).toUpperCase() + l.slice(1); });
+var riskColors = ['#28a745', '#ffc107', '#fd7e14', '#dc3545'];
+
+new Chart(riskCtx, {
+    type: 'doughnut',
+    data: {
+        labels: riskDisplayLabels,
+        datasets: [{
+            data: riskData,
+            backgroundColor: riskColors
+        }]
+    }
+});
+
+// Trust score trend
+var trustCtx = document.getElementById('trustChart').getContext('2d');
+var trustLabels = trustDataRaw.map(function(d) { return d.time; });
+var trustValues = trustDataRaw.map(function(d) { return d.score; });
+
+new Chart(trustCtx, {
+    type: 'line',
+    data: {
+        labels: trustLabels,
+        datasets: [{
+            label: 'Trust Score',
+            data: trustValues,
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        scales: {
+            y: { beginAtZero: true, max: 100 }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+
+
+{% block title %}Dashboard - AI Auth System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .trust-gauge {
+        position: relative;
+        width: 140px;
+        height: 70px;
+        margin: 0 auto;
+    }
+    .trust-gauge-bg {
+        width: 140px;
+        height: 70px;
+        border-radius: 70px 70px 0 0;
+        background: #e9ecef;
+        position: relative;
+        overflow: hidden;
+    }
+    .trust-gauge-fill {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 140px;
+        height: 70px;
+        border-radius: 70px 70px 0 0;
+        transform-origin: bottom center;
+        transition: transform 1s ease-out;
+    }
+    .trust-gauge-value {
+        position: absolute;
+        bottom: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .insight-card {
+        border-left: 3px solid;
+        transition: transform 0.2s;
+    }
+    .insight-card:hover {
+        transform: translateY(-3px);
+    }
+    .activity-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .activity-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="fas fa-tachometer-alt"></i> Dashboard</h1>
+            <p class="text-muted">Welcome back, {{ user.profile.full_name|default:user.email }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge bg-success"><i class="fas fa-circle"></i> Active</span>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card border-left-primary">
+                <div class="card-body py-3">
+                    <h6 class="text-muted">Today's Logins</h6>
+                    <h3 class="text-primary">{{ today_logins }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card border-left-danger">
+                <div class="card-body py-3">
+                    <h6 class="text-muted">Failed Logins</h6>
+                    <h3 class="text-danger">{{ failed_logins }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card border-left-info">
+                <div class="card-body py-3">
+                    <h6 class="text-muted">Trusted Devices</h6>
+                    <h3 class="text-info">{{ trusted_devices }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 mb-3">
+            <div class="card border-left-warning">
+                <div class="card-body py-3">
+                    <h6 class="text-muted">Suspicious Attempts</h6>
+                    <h3 class="text-warning">{{ suspicious_logins }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trust Score Gauge + Login Pattern -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card text-center">
+                <div class="card-header">
+                    <h6 class="mb-0">Your Trust Score</h6>
+                </div>
+                <div class="card-body">
+                    <div class="trust-gauge">
+                        <div class="trust-gauge-bg">
+                            <div class="trust-gauge-fill" id="gaugeFill"
+                                 data-trust-score="{{ avg_trust_score|floatformat:0 }}"></div>
+                        </div>
+                        <div class="trust-gauge-value">
+                            <span class="{% if avg_trust_score >= 80 %}text-success{% elif avg_trust_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ avg_trust_score|floatformat:0 }}
+                            </span>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        {% if avg_trust_score >= 80 %}High Trust - Direct Login{% elif avg_trust_score >= 50 %}Medium Trust - OTP Required{% else %}Low Trust - Blocked{% endif %}
+                    </small>
+                    {% if latest_behavior %}
+                    <small class="d-block mt-1"><strong>{{ latest_behavior.prediction_label|default:"Behavior analyzed" }}</strong></small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Last Secure Login</h6>
+                </div>
+                <div class="card-body">
+                    {% if last_secure_login %}
+                    <p class="mb-1"><i class="fas fa-clock text-muted me-1"></i> {{ last_secure_login.timestamp|date:"M d, Y g:i A" }}</p>
+                    <p class="mb-1"><i class="fas fa-globe text-muted me-1"></i> {{ last_secure_login.ip_address }}</p>
+                    <p class="mb-0"><i class="fas fa-laptop text-muted me-1"></i> {{ last_secure_login.device }} / {{ last_secure_login.browser }}</p>
+                    {% else %}
+                    <p class="text-muted mb-0">Not enough trusted history yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Login Pattern Summary</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><i class="fas fa-desktop text-muted me-1"></i> Usual device: <strong>{{ login_pattern_summary.common_device }}</strong></p>
+                    <p class="mb-1"><i class="fas fa-clock text-muted me-1"></i> Typical hour:
+                        <strong>{% if login_pattern_summary.common_hour != None %}{{ login_pattern_summary.common_hour }}:00{% else %}Learning{% endif %}</strong>
+                    </p>
+                    <p class="mb-0"><i class="fas fa-keyboard text-muted me-1"></i> Avg typing: <strong>{{ login_pattern_summary.avg_typing_speed|floatformat:1 }} cps</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Login History -->
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-history"></i> Recent Login Activity</h6>
+                </div>
+                <div class="card-body p-0">
+                    {% for login in recent_logins %}
+                    <div class="activity-item px-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if login.status == 'success' %}
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                {% elif login.status == 'failed' %}
+                                    <i class="fas fa-times-circle text-danger me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                                {% endif %}
+                                <span class="fw-medium">{{ login.device|default:"Unknown" }}</span>
+                                <small class="text-muted ms-2">{{ login.browser }}</small>
+                            </div>
+                            <div class="text-end">
+                                {% if login.trust_score %}
+                                <span class="badge {% if login.trust_score >= 80 %}bg-success{% elif login.trust_score >= 50 %}bg-warning{% else %}bg-danger{% endif %}">
+                                    {{ login.trust_score|floatformat:0 }}%
+                                </span>
+                                {% endif %}
+                                <small class="text-muted ms-2">{{ login.timestamp|date:"g:i A" }}</small>
+                            </div>
+                        </div>
+                        <small class="text-muted ps-4">{{ login.ip_address }} | {{ login.timestamp|date:"M d, Y" }}</small>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                        No recent logins
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-md-4 mb-4">
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'dashboard:security' %}" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                        <i class="fas fa-shield-alt"></i> Security Settings
+                    </a>
+                    <a href="{% url 'accounts:security' %}" class="btn btn-outline-info btn-sm w-100 mb-2">
+                        <i class="fas fa-lock"></i> Account Security
+                    </a>
+                    <a href="{% url 'dashboard:analytics' %}" class="btn btn-outline-success btn-sm w-100 mb-2">
+                        <i class="fas fa-chart-bar"></i> Behavior Analytics
+                    </a>
+                    <a href="{% url 'accounts:login_history' %}" class="btn btn-outline-warning btn-sm w-100">
+                        <i class="fas fa-history"></i> Full Login History
+                    </a>
+                </div>
+            </div>
+
+            <!-- Behavior Insights -->
+            {% if latest_behavior %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-brain"></i> Latest Behavior Insights</h6>
+                </div>
+                <div class="card-body">
+                    <div class="insight-card ps-2 mb-2" style="border-color: #667eea;">
+                        <small class="text-muted">Typing Speed</small>
+                        <div><strong>{{ latest_behavior.typing_speed|floatformat:1 }}</strong> <small>chars/sec</small></div>
+                    </div>
+                    <div class="insight-card ps-2 mb-2" style="border-color: #17a2b8;">
+                        <small class="text-muted">Hold Time</small>
+                        <div><strong>{{ latest_behavior.avg_hold_time|floatformat:0 }}</strong> <small>ms</small></div>
+                    </div>
+                    <div class="insight-card ps-2" style="border-color: #28a745;">
+                        <small class="text-muted">Device Recognition</small>
+                        <div>
+                            {% if recognized_device %}
+                                <span class="text-success"><i class="fas fa-check-circle"></i> Recognized</span>
+                            {% else %}
+                                <span class="text-warning"><i class="fas fa-exclamation-circle"></i> New Device</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var gaugeFill = document.getElementById('gaugeFill');
+    if (gaugeFill) {
+        var score = parseInt(gaugeFill.dataset.trustScore, 10) || 0;
+        var degrees = (score / 100) * 180;
+        var gradStart, gradEnd;
+        if (score >= 80) { gradStart = '#28a745'; gradEnd = '#20c997'; }
+        else if (score >= 50) { gradStart = '#ffc107'; gradEnd = '#fd7e14'; }
+        else { gradStart = '#dc3545'; gradEnd = '#f5c6cb'; }
+        gaugeFill.style.background = 'linear-gradient(to right, ' + gradStart + ', ' + gradEnd + ')';
+        gaugeFill.style.transform = 'rotate(' + degrees + 'deg)';
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}User Reports - AI Auth System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <h1><i class="fas fa-file-alt me-2"></i>User Reports</h1>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card mb-4" style="border-radius: 15px; border: none;">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="user" class="form-label"><i class="fas fa-user me-1"></i> Select User</label>
+                    <select name="user_id" class="form-select">
+                        <option value="">All Users</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if user.id|stringformat:"s" == selected_user %}selected{% endif %}>
+                            {{ user.email }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="days" class="form-label"><i class="fas fa-calendar me-1"></i> Date Range</label>
+                    <select name="days" class="form-select">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 Days</option>
+                        <option value="30" {% if days == 30 or not days %}selected{% endif %}>Last 30 Days</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 Days</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i> Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if report_data %}
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card border-left-primary text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-sign-in-alt text-primary mb-2"></i>
+                    <h6 class="text-muted mb-1">Total Logins</h6>
+                    <h3 class="text-primary mb-0">{{ report_data.total_logins }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-success text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-percentage text-success mb-2"></i>
+                    <h6 class="text-muted mb-1">Success Rate</h6>
+                    <h3 class="text-success mb-0">{{ report_data.success_rate|floatformat:1 }}%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-info text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-star text-info mb-2"></i>
+                    <h6 class="text-muted mb-1">Avg Trust Score</h6>
+                    <h3 class="text-info mb-0">{{ report_data.avg_trust_score|floatformat:0 }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-warning text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-laptop text-warning mb-2"></i>
+                    <h6 class="text-muted mb-1">Unique Devices</h6>
+                    <h3 class="text-warning mb-0">{{ report_data.unique_devices }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Details Table -->
+    <div class="card mb-4" style="border-radius: 15px; border: none;">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2"></i>Login Details</h5>
+            <a href="?{% if selected_user %}user_id={{ selected_user }}&{% endif %}export=csv" class="btn btn-sm btn-success">
+                <i class="fas fa-download me-1"></i> Export CSV
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Email</th>
+                        <th>IP Address</th>
+                        <th>Device</th>
+                        <th>Status</th>
+                        <th>Risk Level</th>
+                        <th>Trust Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"M d, Y g:i A" }}</td>
+                        <td>{{ log.email }}</td>
+                        <td><code>{{ log.ip_address }}</code></td>
+                        <td>{{ log.device }} / {{ log.browser }}</td>
+                        <td>
+                            {% if log.status == 'success' %}
+                                <span class="badge bg-success">Success</span>
+                            {% elif log.status == 'failed' %}
+                                <span class="badge bg-danger">Failed</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ log.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.risk_level == 'low' %}
+                                <span class="badge bg-success">Low</span>
+                            {% elif log.risk_level == 'medium' %}
+                                <span class="badge bg-warning">Medium</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ log.risk_level|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.trust_score %}
+                                <span class="fw-bold {% if log.trust_score >= 80 %}text-success{% elif log.trust_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ log.trust_score|floatformat:0 }}%
+                                </span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                            No login records found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="card" style="border-radius: 15px; border: none;">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-filter fa-3x text-muted mb-3 d-block"></i>
+            <h5 class="text-muted">Select a user or date range</h5>
+            <p class="text-muted">Use the filters above to generate a report.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard - AI Auth System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-line me-2"></i>Admin Dashboard</h1>
+    </div>
+
+    <!-- Key Metrics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-2">
+            <div class="card border-left-primary text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-users text-primary mb-1"></i>
+                    <h6 class="text-muted mb-1">Total Users</h6>
+                    <h3 class="text-primary mb-0">{{ total_users }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-left-success text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-user-check text-success mb-1"></i>
+                    <h6 class="text-muted mb-1">Active Users</h6>
+                    <h3 class="text-success mb-0">{{ active_users }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-left-danger text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-lock text-danger mb-1"></i>
+                    <h6 class="text-muted mb-1">Locked</h6>
+                    <h3 class="text-danger mb-0">{{ locked_users }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-left-info text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-sign-in-alt text-info mb-1"></i>
+                    <h6 class="text-muted mb-1">Total Logins</h6>
+                    <h3 class="text-info mb-0">{{ total_logins }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-left-primary text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-percentage text-primary mb-1"></i>
+                    <h6 class="text-muted mb-1">Success Rate</h6>
+                    <h3 class="text-primary mb-0">{{ success_rate|floatformat:1 }}%</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-left-warning text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-exclamation-triangle text-warning mb-1"></i>
+                    <h6 class="text-muted mb-1">Suspicious</h6>
+                    <h3 class="text-warning mb-0">{{ total_suspicious }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card text-center" style="border-radius: 12px; border: none;">
+                <div class="card-body py-2">
+                    <h6 class="text-muted mb-1">Failed Logins</h6>
+                    <h4 class="text-danger mb-0">{{ failed_logins }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center" style="border-radius: 12px; border: none;">
+                <div class="card-body py-2">
+                    <h6 class="text-muted mb-1">OTP Required</h6>
+                    <h4 class="text-warning mb-0">{{ otp_logins }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center" style="border-radius: 12px; border: none;">
+                <div class="card-body py-2">
+                    <h6 class="text-muted mb-1">Avg Typing Speed</h6>
+                    <h4 class="text-primary mb-0">{{ avg_typing_speed|floatformat:1 }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center" style="border-radius: 12px; border: none;">
+                <div class="card-body py-2">
+                    <h6 class="text-muted mb-1">Avg Mouse Speed</h6>
+                    <h4 class="text-info mb-0">{{ avg_mouse_speed|floatformat:1 }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar Navigation -->
+        <div class="col-md-3 col-lg-2 mb-4">
+            <div class="list-group shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <a href="{% url 'adminpanel:dashboard' %}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-chart-pie me-2"></i> Dashboard
+                </a>
+                <a href="{% url 'adminpanel:users' %}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users me-2"></i> User Management
+                </a>
+                <a href="{% url 'adminpanel:security_logs' %}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-shield-alt me-2"></i> Security Logs
+                </a>
+                <a href="{% url 'adminpanel:devices' %}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-laptop me-2"></i> Device Tracking
+                </a>
+                <a href="{% url 'ml_engine:dashboard' %}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-brain me-2"></i> ML Dashboard
+                </a>
+                <a href="{% url 'reports:behavior_report' %}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-area me-2"></i> Behavior Report
+                </a>
+            </div>
+
+            {% if latest_model %}
+            <div class="card mt-3" style="border-radius: 12px; border: none;">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-brain me-1"></i> ML Model</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Type:</strong> {{ latest_model.model_type }}</p>
+                    <p class="mb-1"><strong>Accuracy:</strong> <span class="badge bg-success">{{ latest_model.accuracy|floatformat:2 }}%</span></p>
+                    <p class="mb-2"><strong>Trained:</strong> {{ latest_model.trained_at|date:"M d, Y" }}</p>
+                    <a href="{% url 'ml_engine:train' %}" class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-sync me-1"></i> Retrain
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="col-md-9 col-lg-10">
+            <!-- Charts Row -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card" style="border-radius: 12px; border: none;">
+                        <div class="card-header bg-transparent border-bottom py-3">
+                            <h6 class="mb-0 fw-bold"><i class="fas fa-chart-bar me-2 text-primary"></i>Daily Login Activity</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="dailyLoginChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card" style="border-radius: 12px; border: none;">
+                        <div class="card-header bg-transparent border-bottom py-3">
+                            <h6 class="mb-0 fw-bold"><i class="fas fa-chart-pie me-2 text-info"></i>Authentication Statistics</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="authStatsChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="card" style="border-radius: 12px; border: none;">
+                        <div class="card-header bg-transparent border-bottom py-3">
+                            <h6 class="mb-0 fw-bold"><i class="fas fa-shield-alt me-2 text-warning"></i>Risk Level Distribution</h6>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="riskDistChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card" style="border-radius: 12px; border: none;">
+                        <div class="card-header bg-transparent border-bottom py-3">
+                            <h6 class="mb-0 fw-bold"><i class="fas fa-laptop me-2 text-secondary"></i>Device History</h6>
+                        </div>
+                        <div class="card-body">
+                            {% for item in device_history %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span><i class="fas fa-desktop text-muted me-2"></i>{{ item.device|default:"Unknown" }}</span>
+                                <span class="badge bg-primary">{{ item.count }}</span>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted text-center mb-0">No device history yet.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Security Events -->
+            <div class="card mb-4" style="border-radius: 12px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-exclamation-triangle me-2 text-danger"></i>Recent Security Events</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Time</th>
+                                <th>IP Address</th>
+                                <th>Status</th>
+                                <th>Trust Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in recent_events %}
+                            <tr>
+                                <td>{{ event.email }}</td>
+                                <td>{{ event.timestamp|date:"M d, g:i A" }}</td>
+                                <td><code>{{ event.ip_address }}</code></td>
+                                <td>
+                                    {% if event.status == 'failed' %}
+                                        <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>
+                                    {% else %}
+                                        <span class="badge bg-warning"><i class="fas fa-exclamation me-1"></i>Suspicious</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if event.trust_score %}
+                                        <span class="fw-bold {% if event.trust_score >= 80 %}text-success{% elif event.trust_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ event.trust_score|floatformat:0 }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>
+                                    No recent security events
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Suspicious Activities -->
+            {% if suspicious_activities %}
+            <div class="card mb-4" style="border-radius: 12px; border-left: 4px solid #ffc107;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-user-secret me-2 text-warning"></i>Unresolved Suspicious Activities</h6>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Type</th>
+                                <th>Severity</th>
+                                <th>Description</th>
+                                <th>IP</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity in suspicious_activities %}
+                            <tr>
+                                <td>{{ activity.user.email|default:"Unknown" }}</td>
+                                <td><span class="badge bg-secondary">{{ activity.get_activity_type_display }}</span></td>
+                                <td>
+                                    {% if activity.severity == 'critical' %}
+                                        <span class="badge bg-danger">{{ activity.get_severity_display }}</span>
+                                    {% elif activity.severity == 'high' %}
+                                        <span class="badge bg-warning text-dark">{{ activity.get_severity_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ activity.get_severity_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ activity.description|truncatechars:60 }}</small></td>
+                                <td><code>{{ activity.ip_address }}</code></td>
+                                <td>{{ activity.created_at|date:"M d, g:i A" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# -- Embed chart data using Django's json_script to avoid linter errors with {{ }} in JS -- #}
+{{ daily_logins|json_script:"daily-logins-data" }}
+{{ auth_stats|json_script:"auth-stats-data" }}
+{{ risk_distribution|json_script:"risk-distribution-data" }}
+
+<script>
+/* Read chart data from Django json_script tags */
+var dailyData = JSON.parse(document.getElementById('daily-logins-data').textContent);
+var authDataRaw = JSON.parse(document.getElementById('auth-stats-data').textContent);
+var riskDataRaw = JSON.parse(document.getElementById('risk-distribution-data').textContent);
+
+/* Daily Login Activity Chart */
+var dailyCtx = document.getElementById('dailyLoginChart').getContext('2d');
+var dailyLabels = dailyData.map(function(d) { return d.date || ''; });
+var dailySuccess = dailyData.map(function(d) { return d.success || 0; });
+var dailyFailed = dailyData.map(function(d) { return d.failed || 0; });
+
+new Chart(dailyCtx, {
+    type: 'bar',
+    data: {
+        labels: dailyLabels,
+        datasets: [
+            {
+                label: 'Successful',
+                data: dailySuccess,
+                backgroundColor: '#28a745',
+                borderRadius: 4
+            },
+            {
+                label: 'Failed',
+                data: dailyFailed,
+                backgroundColor: '#dc3545',
+                borderRadius: 4
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { y: { beginAtZero: true, stacked: true }, x: { stacked: true } }
+    }
+});
+
+/* Authentication Statistics Doughnut Chart */
+var authCtx = document.getElementById('authStatsChart').getContext('2d');
+var authLabels = authDataRaw.map(function(d) {
+    var labels = {'success': 'Successful', 'failed': 'Failed', 'otp_required': 'OTP Required', 'blocked': 'Blocked'};
+    return labels[d.status] || d.status;
+});
+var authCounts = authDataRaw.map(function(d) { return d.count; });
+var authColors = authDataRaw.map(function(d) {
+    var colors = {'success': '#28a745', 'failed': '#dc3545', 'otp_required': '#ffc107', 'blocked': '#6c757d'};
+    return colors[d.status] || '#17a2b8';
+});
+
+new Chart(authCtx, {
+    type: 'doughnut',
+    data: {
+        labels: authLabels,
+        datasets: [{
+            data: authCounts,
+            backgroundColor: authColors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '60%'
+    }
+});
+
+/* Risk Level Distribution Chart */
+var riskCtx = document.getElementById('riskDistChart').getContext('2d');
+var riskLabels = riskDataRaw.map(function(d) {
+    return d.risk_level ? d.risk_level.charAt(0).toUpperCase() + d.risk_level.slice(1) : 'Unknown';
+});
+var riskCounts = riskDataRaw.map(function(d) { return d.count; });
+var riskColors = riskDataRaw.map(function(d) {
+    var colors = {'low': '#28a745', 'medium': '#ffc107', 'high': '#fd7e14', 'critical': '#dc3545'};
+    return colors[d.risk_level] || '#6c757d';
+});
+
+new Chart(riskCtx, {
+    type: 'doughnut',
+    data: {
+        labels: riskLabels,
+        datasets: [{
+            data: riskCounts,
+            backgroundColor: riskColors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '60%'
+    }
+});
+</script>
+{% endblock %}

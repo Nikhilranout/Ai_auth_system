@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}ML Model Dashboard - AI Auth System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <h1><i class="fas fa-brain me-2"></i>ML Model Dashboard</h1>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-left-primary" style="border-radius: 15px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="section-icon bg-primary bg-opacity-10 me-3">
+                            <i class="fas fa-cogs text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">Model Status</h6>
+                        </div>
+                    </div>
+                    {% if latest_metrics %}
+                        <p class="mb-1"><strong>Type:</strong> {{ latest_metrics.model_type }}</p>
+                        <p class="mb-1"><strong>Accuracy:</strong> <span class="badge bg-success">{{ latest_metrics.accuracy|floatformat:2 }}%</span></p>
+                        <p class="mb-0"><strong>Status:</strong> <span class="badge bg-success">Active</span></p>
+                    {% else %}
+                        <div class="empty-state py-3">
+                            <i class="fas fa-robot"></i>
+                            <p class="mb-0">No trained model</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-left-info" style="border-radius: 15px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="section-icon bg-info bg-opacity-10 me-3">
+                            <i class="fas fa-database text-info"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">Training Data</h6>
+                        </div>
+                    </div>
+                    <p class="mb-1"><strong>Total Behaviors:</strong> {{ total_behaviors }}</p>
+                    <p class="mb-1"><strong>Users Tracked:</strong> {{ users_with_data }}</p>
+                    <p class="mb-0"><strong>Last Update:</strong> Today</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card border-left-warning" style="border-radius: 15px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="section-icon bg-warning bg-opacity-10 me-3">
+                            <i class="fas fa-chart-line text-warning"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">Login Stats</h6>
+                        </div>
+                    </div>
+                    <p class="mb-1"><strong>Total Logins:</strong> {{ total_logins }}</p>
+                    <p class="mb-1"><strong>Success Rate:</strong> {{ success_rate|floatformat:1 }}%</p>
+                    <p class="mb-0"><strong>Accurate Detection:</strong> {{ latest_metrics.accuracy|floatformat:1 }}%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card" style="border-radius: 15px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-chart-pie me-2"></i>Risk Level Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="riskChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card" style="border-radius: 15px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-graduation-cap me-2"></i>Model Training</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'ml_engine:train' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="model_type" class="form-label">Select Model Algorithm</label>
+                            <select name="model_type" class="form-select">
+                                <option value="random_forest">Random Forest</option>
+                                <option value="logistic_regression">Logistic Regression</option>
+                                <option value="decision_tree">Decision Tree</option>
+                            </select>
+                        </div>
+                        <div class="alert alert-info small mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Training uses behavioral data collected from user logins. More data improves accuracy.
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-sync me-1"></i> Train Model
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ risk_distribution|json_script:"ml-risk-distribution" }}
+
+<script>
+var riskDistRaw = JSON.parse(document.getElementById('ml-risk-distribution').textContent);
+var riskData = riskDistRaw.map(function(d) { return d.count; });
+var riskLabelsRaw = riskDistRaw.map(function(d) { return d.risk_level || 'unknown'; });
+var riskLabels = riskLabelsRaw.map(function(l) { return l.charAt(0).toUpperCase() + l.slice(1); });
+var riskColorMap = { 'low': '#28a745', 'medium': '#ffc107', 'high': '#fd7e14', 'critical': '#dc3545' };
+var riskColors = riskLabelsRaw.map(function(l) { return riskColorMap[l] || '#6c757d'; });
+
+new Chart(document.getElementById('riskChart'), {
+    type: 'doughnut',
+    data: {
+        labels: riskLabels,
+        datasets: [{
+            data: riskData,
+            backgroundColor: riskColors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '60%'
+    }
+});
+</script>
+{% endblock %}

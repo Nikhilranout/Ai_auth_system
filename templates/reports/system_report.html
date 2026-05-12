@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}System Reports - AI Auth System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header">
+        <h1><i class="fas fa-chart-bar me-2"></i>System Reports</h1>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card border-left-primary text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-users text-primary mb-2"></i>
+                    <h6 class="text-muted mb-1">Total Users</h6>
+                    <h3 class="text-primary mb-0">{{ total_users }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-success text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-user-check text-success mb-2"></i>
+                    <h6 class="text-muted mb-1">Active Users</h6>
+                    <h3 class="text-success mb-0">{{ active_users }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-info text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-sign-in-alt text-info mb-2"></i>
+                    <h6 class="text-muted mb-1">Total Logins</h6>
+                    <h3 class="text-info mb-0">{{ total_logins }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-warning text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-percentage text-warning mb-2"></i>
+                    <h6 class="text-muted mb-1">Success Rate</h6>
+                    <h3 class="text-warning mb-0">{{ success_rate|floatformat:1 }}%</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Authentication Stats Chart -->
+        <div class="col-md-6">
+            <div class="card" style="border-radius: 15px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-chart-pie me-2"></i>Authentication Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="authStatsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- Device Distribution Chart -->
+        <div class="col-md-6">
+            <div class="card" style="border-radius: 15px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-laptop me-2"></i>Device Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="deviceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Metrics Table -->
+    <div class="card mb-4" style="border-radius: 15px; border: none;">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-table me-2"></i>System Metrics</h5>
+            <a href="?export=csv" class="btn btn-sm btn-success">
+                <i class="fas fa-download me-1"></i> Export CSV
+            </a>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <tbody>
+                    <tr>
+                        <td><i class="fas fa-users text-primary me-2"></i><strong>Total Users</strong></td>
+                        <td>{{ total_users }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-user-check text-success me-2"></i><strong>Active Users</strong></td>
+                        <td>{{ active_users }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-lock text-danger me-2"></i><strong>Locked Accounts</strong></td>
+                        <td>{{ locked_accounts|default:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-user-shield text-info me-2"></i><strong>Admin Users</strong></td>
+                        <td>{{ admin_users|default:0 }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-sign-in-alt text-primary me-2"></i><strong>Total Logins</strong></td>
+                        <td>{{ total_logins }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-percentage text-success me-2"></i><strong>Success Rate</strong></td>
+                        <td>{{ success_rate|floatformat:1 }}%</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-times-circle text-danger me-2"></i><strong>Failed Logins</strong></td>
+                        <td>{{ failed }}</td>
+                    </tr>
+                    <tr>
+                        <td><i class="fas fa-exclamation-triangle text-warning me-2"></i><strong>Suspicious Logins</strong></td>
+                        <td>{{ suspicious }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{{ auth_stats_data|json_script:"system-auth-stats" }}
+{{ devices|json_script:"system-devices" }}
+
+<script>
+var authStatsData = JSON.parse(document.getElementById('system-auth-stats').textContent);
+var devicesData = JSON.parse(document.getElementById('system-devices').textContent);
+
+// Authentication stats doughnut
+var authCtx = document.getElementById('authStatsChart').getContext('2d');
+var authLabels = ['Successful', 'Failed', 'Suspicious'];
+var authData = [authStatsData.successful || 0, authStatsData.failed || 0, authStatsData.suspicious || 0];
+
+new Chart(authCtx, {
+    type: 'doughnut',
+    data: {
+        labels: authLabels,
+        datasets: [{
+            data: authData,
+            backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '60%'
+    }
+});
+
+// Device distribution bar chart
+var devLabels = Object.keys(devicesData);
+var devData = Object.values(devicesData);
+var devCtx = document.getElementById('deviceChart').getContext('2d');
+new Chart(devCtx, {
+    type: 'bar',
+    data: {
+        labels: devLabels,
+        datasets: [{
+            label: 'Logins',
+            data: devData,
+            backgroundColor: 'rgba(102, 126, 234, 0.7)',
+            borderRadius: 6
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+    }
+});
+</script>
+{% endblock %}

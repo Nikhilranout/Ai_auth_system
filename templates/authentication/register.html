@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}Register - AI Auth System{% endblock %}
+
+{% block extra_css %}
+<style>
+    body{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .register-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+    /* Password strength indicator */
+    .password-strength {
+        height: 5px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+        margin-top: 5px;
+    }
+    .strength-weak { background: #dc3545; width: 25%; }
+    .strength-fair { background: #fd7e14; width: 50%; }
+    .strength-good { background: #ffc107; width: 75%; }
+    .strength-strong { background: #28a745; width: 100%; }
+    .strength-text {
+        font-size: 0.8rem;
+        margin-top: 3px;
+    }
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6c757d;
+        z-index: 5;
+    }
+    .password-field-wrapper {
+        position: relative;
+    }
+    .password-field-wrapper input {
+        padding-right: 40px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow" style="border-radius: 15px;">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-4">
+                            <i class="fas fa-user-plus text-primary"></i> Create Account
+                        </h2>
+                        <p class="text-center text-muted mb-4">Join the AI-Powered Security Platform</p>
+
+                        <form method="post" action="{% url 'auth:register' %}" id="registerForm" novalidate>
+                            {% csrf_token %}
+
+                            <div class="mb-3">
+                                <label for="id_full_name" class="form-label">Full Name</label>
+                                {{ form.full_name }}
+                                {% if form.full_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.full_name.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="id_email" class="form-label">Email Address</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.email.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="id_username" class="form-label">Username</label>
+                                {{ form.username }}
+                                {% if form.username.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.username.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="id_password1" class="form-label">Password</label>
+                                <div class="password-field-wrapper">
+                                    {{ form.password1 }}
+                                    <i class="fas fa-eye password-toggle" id="togglePassword1" onclick="togglePassword('id_password1', 'togglePassword1')"></i>
+                                </div>
+                                <div class="password-strength" id="passwordStrength"></div>
+                                <small class="strength-text" id="passwordStrengthText"></small>
+                                <small class="form-text text-muted d-block mt-1">
+                                    Min 8 characters with letters and numbers recommended
+                                </small>
+                                {% if form.password1.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.password1.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="id_password2" class="form-label">Confirm Password</label>
+                                <div class="password-field-wrapper">
+                                    {{ form.password2 }}
+                                    <i class="fas fa-eye password-toggle" id="togglePassword2" onclick="togglePassword('id_password2', 'togglePassword2')"></i>
+                                </div>
+                                {% if form.password2.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.password2.errors }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 mb-3" id="submitBtn">
+                                <i class="fas fa-user-check"></i> Create Account
+                            </button>
+                        </form>
+
+                        <hr>
+
+                        <div class="text-center">
+                            <p>Already have an account?
+                                <a href="{% url 'auth:login' %}">Login here</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* Password visibility toggle */
+function togglePassword(inputId, toggleId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(toggleId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+/* Password strength indicator */
+document.getElementById('id_password1').addEventListener('input', function() {
+    const password = this.value;
+    const strengthBar = document.getElementById('passwordStrength');
+    const strengthText = document.getElementById('passwordStrengthText');
+
+    if (!password) {
+        strengthBar.className = 'password-strength';
+        strengthText.textContent = '';
+        return;
+    }
+
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+    if (/\d/.test(password)) score++;
+    if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+    const levels = [
+        { cls: 'strength-weak', text: 'Weak', color: '#dc3545' },
+        { cls: 'strength-weak', text: 'Weak', color: '#dc3545' },
+        { cls: 'strength-fair', text: 'Fair', color: '#fd7e14' },
+        { cls: 'strength-good', text: 'Good', color: '#ffc107' },
+        { cls: 'strength-strong', text: 'Strong', color: '#28a745' },
+        { cls: 'strength-strong', text: 'Very Strong', color: '#28a745' },
+    ];
+
+    const level = levels[Math.min(score, levels.length - 1)];
+    strengthBar.className = 'password-strength ' + level.cls;
+    strengthText.textContent = level.text;
+    strengthText.style.color = level.color;
+});
+
+/* Client-side form validation */
+document.getElementById('registerForm').addEventListener('submit', function(e) {
+    const pw1 = document.getElementById('id_password1').value;
+    const pw2 = document.getElementById('id_password2').value;
+    if (pw1 && pw2 && pw1 !== pw2) {
+        e.preventDefault();
+        alert('Passwords do not match!');
+    }
+});
+</script>
+{% endblock %}

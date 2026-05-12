@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Security - AI Auth System{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header">
+        <h1><i class="fas fa-shield-alt me-2"></i>Account Security</h1>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-8">
+            <!-- Recent Login Activity -->
+            <div class="card mb-4" style="border-radius: 15px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-history me-2"></i>Recent Login Activity</h5>
+                    <a href="{% url 'accounts:login_history' %}" class="btn btn-sm btn-outline-primary">
+                        View All <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>IP Address</th>
+                                <th>Device</th>
+                                <th>Status</th>
+                                <th>Trust Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for login in login_history %}
+                            <tr>
+                                <td>{{ login.timestamp|date:"M d, g:i A" }}</td>
+                                <td><code>{{ login.ip_address }}</code></td>
+                                <td>
+                                    <i class="fas fa-{% if login.device == 'Mobile' %}mobile-alt{% elif login.device == 'Tablet' %}tablet-alt{% else %}desktop{% endif %} me-1 text-muted"></i>
+                                    {{ login.device }} / {{ login.browser }}
+                                </td>
+                                <td>
+                                    {% if login.status == 'success' %}
+                                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>Success</span>
+                                    {% elif login.status == 'failed' %}
+                                        <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ login.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if login.trust_score %}
+                                        <span class="fw-bold {% if login.trust_score >= 80 %}text-success{% elif login.trust_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                            {{ login.trust_score|floatformat:0 }}%
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                    No login activity yet
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Last Login Info -->
+            {% if last_login %}
+            <div class="card mb-3" style="border-radius: 15px; border: none;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2"><i class="fas fa-clock me-1"></i> Last Successful Login</h6>
+                    <p class="fw-bold mb-1">{{ last_login.timestamp|date:"M d, Y g:i A" }}</p>
+                    <small class="text-muted">From {{ last_login.ip_address }} via {{ last_login.browser }}</small>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Trusted Devices -->
+            <div class="card mb-3" style="border-radius: 15px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-laptop me-2"></i>Trusted Devices</h5>
+                </div>
+                <div class="card-body">
+                    {% if trusted_devices %}
+                        {% for device in trusted_devices %}
+                        <div class="d-flex justify-content-between align-items-start mb-3 p-2 border-bottom">
+                            <div>
+                                <strong>{{ device.device_name }}</strong><br>
+                                <small class="text-muted">
+                                    {{ device.browser }} on {{ device.os }}<br>
+                                    Last: {{ device.last_used|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            <form method="post" action="{% url 'accounts:remove_device' device.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Remove device">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="empty-state">
+                        <i class="fas fa-laptop"></i>
+                        <p>No trusted devices</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card" style="border-radius: 15px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'accounts:change_password' %}" class="btn btn-warning btn-sm w-100 mb-2">
+                        <i class="fas fa-key me-1"></i> Change Password
+                    </a>
+                    <a href="{% url 'accounts:edit_profile' %}" class="btn btn-info btn-sm w-100 text-white mb-2">
+                        <i class="fas fa-edit me-1"></i> Edit Profile
+                    </a>
+                    <a href="{% url 'dashboard:security' %}" class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-shield-alt me-1"></i> Security Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

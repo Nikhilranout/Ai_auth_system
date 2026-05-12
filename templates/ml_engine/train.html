@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block title %}Train Model - AI Auth System{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="page-header">
+        <h1><i class="fas fa-brain me-2"></i>Train ML Model</h1>
+    </div>
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card" style="border-radius: 15px; border: none;">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h3 class="mb-0 fw-bold"><i class="fas fa-brain me-2"></i> Train ML Model</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Training a new model will replace the current one. This requires sufficient behavioral data.
+                    </div>
+                    
+                    <form method="post" id="trainForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="model_type" class="form-label">Select Model Type</label>
+                            <select name="model_type" class="form-select form-select-lg" id="model_type">
+                                <option value="random_forest" selected>Random Forest (Recommended - Highest Accuracy)</option>
+                                <option value="logistic_regression">Logistic Regression (Fast Training)</option>
+                                <option value="decision_tree">Decision Tree (Simple & Interpretable)</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Random Forest provides the best accuracy for this use case.
+                            </small>
+                        </div>
+                        
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">Model Descriptions</h6>
+                                <dl class="row">
+                                    <dt class="col-sm-4">Random Forest</dt>
+                                    <dd class="col-sm-8">Ensemble learning method with high accuracy. Uses multiple decision trees.</dd>
+                                    
+                                    <dt class="col-sm-4">Logistic Regression</dt>
+                                    <dd class="col-sm-8">Simple linear model, fast training, good for binary classification.</dd>
+                                    
+                                    <dt class="col-sm-4">Decision Tree</dt>
+                                    <dd class="col-sm-8">Single tree model, easy to interpret, good for learning.</dd>
+                                </dl>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-play me-1"></i> Start Training
+                        </button>
+                    </form>
+                    
+                    <div id="trainingStatus" style="display: none;" class="mt-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Training...</span>
+                        </div>
+                        <p class="mt-2">Training in progress... This may take a few minutes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Config for JS URLs -->
+<div id="train-config" data-train-url="{% url 'ml_engine:train' %}" style="display:none"></div>
+
+<script>
+var trainConfig = document.getElementById('train-config');
+
+document.getElementById('trainForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    document.getElementById('trainingStatus').style.display = 'block';
+    this.style.display = 'none';
+    
+    const formData = new FormData(this);
+    fetch(trainConfig.dataset.trainUrl, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✓ ' + data.message);
+            location.reload();
+        } else {
+            alert('✗ ' + data.message);
+            document.getElementById('trainingStatus').style.display = 'none';
+            document.getElementById('trainForm').style.display = 'block';
+        }
+    });
+});
+</script>
+{% endblock %}

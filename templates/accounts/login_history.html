@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Login History - AI Auth System{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1 class="mb-1"><i class="fas fa-history me-2"></i>Login History</h1>
+            <p class="text-muted mb-0">Review all login activity for your account</p>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card border-left-primary text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-sign-in-alt text-primary mb-2"></i>
+                    <h6 class="text-muted mb-1">Total Logins</h6>
+                    <h3 class="text-primary mb-0">{{ total_logins }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-danger text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-times-circle text-danger mb-2"></i>
+                    <h6 class="text-muted mb-1">Failed Logins</h6>
+                    <h3 class="text-danger mb-0">{{ failed_logins }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-warning text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-exclamation-triangle text-warning mb-2"></i>
+                    <h6 class="text-muted mb-1">Suspicious</h6>
+                    <h3 class="text-warning mb-0">{{ suspicious_logins }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-left-info text-center" style="border-radius: 12px; border-top: none; border-right: none; border-bottom: none;">
+                <div class="card-body py-3">
+                    <i class="fas fa-globe text-info mb-2"></i>
+                    <h6 class="text-muted mb-1">Unique IPs</h6>
+                    <h3 class="text-info mb-0">{{ unique_ips }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Records Table -->
+    <div class="card" style="border-radius: 15px; border: none;">
+        <div class="card-header bg-transparent border-bottom py-3">
+            <h5 class="mb-0 fw-bold"><i class="fas fa-list me-2"></i>All Logins</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>IP Address</th>
+                        <th>Device</th>
+                        <th>Browser</th>
+                        <th>OS</th>
+                        <th>Status</th>
+                        <th>Risk Level</th>
+                        <th>Trust Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in login_logs %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"M d, Y g:i A" }}</td>
+                        <td><code>{{ log.ip_address }}</code></td>
+                        <td><i class="fas fa-{% if log.device == 'Mobile' %}mobile-alt{% elif log.device == 'Tablet' %}tablet-alt{% else %}desktop{% endif %} me-1 text-muted"></i>{{ log.device }}</td>
+                        <td>{{ log.browser }}</td>
+                        <td>{{ log.os }}</td>
+                        <td>
+                            {% if log.status == 'success' %}
+                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Success</span>
+                            {% elif log.status == 'failed' %}
+                                <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ log.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.risk_level == 'low' %}
+                                <span class="badge bg-success">Low</span>
+                            {% elif log.risk_level == 'medium' %}
+                                <span class="badge bg-warning">Medium</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ log.risk_level|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.trust_score %}
+                                <span class="fw-bold {% if log.trust_score >= 80 %}text-success{% elif log.trust_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ log.trust_score|floatformat:0 }}%
+                                </span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                            <h5>No login history</h5>
+                            <p>Login activity will appear here after your first login.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

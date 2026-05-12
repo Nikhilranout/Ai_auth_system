@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login - AI Auth System{% endblock %}
+
+{% block extra_css %}
+<style>
+    body{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+    .login-card {
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        border-radius: 15px;
+        overflow: hidden;
+    }
+    .biometric-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 20px;
+        background: rgba(102, 126, 234, 0.08);
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        font-size: 0.82rem;
+        color: #667eea;
+        transition: all 0.3s;
+    }
+    .biometric-indicator.active {
+        background: rgba(40, 167, 69, 0.08);
+        border-color: rgba(40, 167, 69, 0.3);
+        color: #28a745;
+    }
+    .biometric-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #667eea;
+        animation: pulse 1.5s ease-in-out infinite;
+    }
+    .biometric-indicator.active .biometric-dot {
+        background: #28a745;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 0.4; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1.2); }
+    }
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6c757d;
+        z-index: 5;
+    }
+    .password-field-wrapper {
+        position: relative;
+    }
+    .password-field-wrapper input {
+        padding-right: 40px;
+    }
+    .login-features {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .login-features .feature-badge {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: rgba(102, 126, 234, 0.08);
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card login-card">
+                    <div class="card-body p-5">
+                        <h2 class="text-center mb-2">
+                            <i class="fas fa-shield-alt text-primary"></i> AI Auth Login
+                        </h2>
+                        <p class="text-center text-muted mb-3">Intelligent Behavioral Authentication</p>
+
+                        <!-- Biometric tracking indicator -->
+                        <div class="d-flex justify-content-center mb-3">
+                            <div class="biometric-indicator" id="trackingIndicator">
+                                <span class="biometric-dot"></span>
+                                <span id="trackingText">Behavior tracking active</span>
+                            </div>
+                        </div>
+
+                        <form method="post" action="{% url 'auth:login' %}" id="loginForm">
+                            {% csrf_token %}
+
+                            <div class="mb-3">
+                                <label for="id_email" class="form-label">Email Address</label>
+                                {{ form.email }}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="id_password" class="form-label">Password</label>
+                                <div class="password-field-wrapper">
+                                    {{ form.password }}
+                                    <i class="fas fa-eye password-toggle" onclick="togglePassword('id_password')"></i>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                {{ form.remember_me }}
+                                <label class="form-check-label" for="id_remember_me">
+                                    Remember me for 30 days
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 mb-3" id="loginBtn">
+                                <i class="fas fa-sign-in-alt"></i> Login
+                            </button>
+
+                            <input type="hidden" id="behavior_data" name="behavior_data">
+                        </form>
+
+                        <hr>
+
+                        <div class="text-center">
+                            <p class="mb-2">
+                                <a href="{% url 'auth:forgot_password' %}">Forgot Password?</a>
+                            </p>
+                            <p>
+                                Don't have an account?
+                                <a href="{% url 'auth:register' %}">Register here</a>
+                            </p>
+                        </div>
+
+                        <div class="login-features mt-3">
+                            <span class="feature-badge"><i class="fas fa-keyboard"></i> Keystroke</span>
+                            <span class="feature-badge"><i class="fas fa-mouse"></i> Mouse</span>
+                            <span class="feature-badge"><i class="fas fa-brain"></i> AI Analysis</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/behavior_tracker.js' %}"></script>
+<script>
+/* Password visibility toggle */
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = input.nextElementSibling;
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+/* Update tracking indicator when behavior is captured */
+document.addEventListener('DOMContentLoaded', function() {
+    var tracker = window.behaviorTracker;
+    if (tracker) {
+        var indicator = document.getElementById('trackingIndicator');
+        var text = document.getElementById('trackingText');
+
+        // Show active state after first interaction
+        var inputs = document.querySelectorAll('#id_email, #id_password');
+        inputs.forEach(function(input) {
+            input.addEventListener('input', function() {
+                if (indicator && !indicator.classList.contains('active')) {
+                    indicator.classList.add('active');
+                    text.textContent = 'Analyzing your behavior...';
+                }
+            });
+        });
+
+        // Show analyzing state on submit
+        var form = document.getElementById('loginForm');
+        if (form) {
+            form.addEventListener('submit', function() {
+                if (indicator) {
+                    text.textContent = 'Behavioral data captured';
+                }
+            });
+        }
+    }
+});
+</script>
+{% endblock %}

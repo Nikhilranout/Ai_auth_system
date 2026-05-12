@@ -1,0 +1,415 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ otp_title|default:"OTP Verification" }} - AI Auth System{% endblock %}
+
+{% block extra_css %}
+<style>
+    body{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .otp-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+    }
+    .otp-card {
+        border-radius: 20px;
+        border: none;
+        overflow: hidden;
+    }
+    .otp-card .card-body {
+        padding: 2.5rem;
+    }
+    /* Split OTP inputs */
+    .otp-inputs {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 25px 0;
+    }
+    .otp-digit {
+        width: 52px;
+        height: 60px;
+        text-align: center;
+        font-size: 1.6rem;
+        font-weight: 700;
+        border: 2px solid #dee2e6;
+        border-radius: 12px;
+        outline: none;
+        transition: all 0.25s ease;
+        background: #f8f9fa;
+        color: #333;
+        caret-color: #667eea;
+    }
+    .otp-digit:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        background: #fff;
+    }
+    .otp-digit.filled {
+        border-color: #667eea;
+        background: rgba(102, 126, 234, 0.04);
+    }
+    .otp-digit.error {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.15);
+        animation: shake 0.4s ease;
+    }
+    @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
+    }
+    /* Progress bar */
+    .otp-progress {
+        height: 4px;
+        border-radius: 4px;
+        background: #e9ecef;
+        margin: 15px 0;
+        overflow: hidden;
+    }
+    .otp-progress-bar {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 1s linear, background 0.5s ease;
+        background: #28a745;
+    }
+    .otp-progress-bar.warning { background: #ffc107; }
+    .otp-progress-bar.danger { background: #dc3545; }
+    /* Timer text */
+    .timer-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .timer-badge.safe { background: rgba(40,167,69,0.1); color: #28a745; }
+    .timer-badge.warning { background: rgba(255,193,7,0.1); color: #e6a700; }
+    .timer-badge.danger { background: rgba(220,53,69,0.1); color: #dc3545; }
+    .resend-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+    .loading-spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+        margin-right: 0.5rem;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .alert { animation: fadeIn 0.3s ease-in; }
+    .verify-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+    @media (max-width: 480px) {
+        .otp-digit { width: 42px; height: 50px; font-size: 1.3rem; }
+        .otp-inputs { gap: 6px; }
+        .otp-card .card-body { padding: 1.5rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="otp-container">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow otp-card">
+                    <div class="card-body p-5 text-center">
+                        <!-- Icon -->
+                        <div class="verify-icon bg-primary bg-opacity-10">
+                            <i class="fas fa-envelope-open-text text-primary fa-2x"></i>
+                        </div>
+
+                        <h3 class="mb-2 fw-bold">{{ otp_heading|default:"Verify OTP" }}</h3>
+                        <p class="text-muted mb-1">
+                            {{ otp_message|default:"We've sent a verification code to" }}
+                        </p>
+                        <p class="fw-bold text-primary mb-0">{{ email }}</p>
+
+                        {% if messages %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} fade-in mt-3" role="alert">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+
+                        <!-- Progress bar showing time remaining -->
+                        <div class="otp-progress mt-4">
+                            <div class="otp-progress-bar" id="otp-progress-bar" style="width: 100%"></div>
+                        </div>
+                        <div class="text-center mb-3">
+                            <span class="timer-badge safe" id="timer-badge">
+                                <i class="far fa-clock"></i>
+                                <span id="otp_timer">5:00</span> remaining
+                            </span>
+                        </div>
+
+                        <form method="post" action="{% url verify_action_url|default:'auth:verify_otp_email' %}" id="otp-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="otp_code" id="id_otp_code" value="">
+
+                            <!-- Split OTP digit inputs -->
+                            <div class="otp-inputs">
+                                <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="0">
+                                <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="1">
+                                <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="2">
+                                <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="3">
+                                <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="4">
+                                <input type="text" class="otp-digit" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="5">
+                            </div>
+
+                            {% if form.otp_code.errors %}
+                                <div class="invalid-feedback d-block mb-2">
+                                    {{ form.otp_code.errors }}
+                                </div>
+                            {% endif %}
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 mb-3" id="verify-btn">
+                                <i class="fas fa-check me-1"></i> {{ otp_button_label|default:"Verify OTP" }}
+                            </button>
+                        </form>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <p class="text-muted mb-2">Didn't receive the code?</p>
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm resend-btn"
+                                    id="resend-btn"
+                                    onclick="resendOTP()">
+                                <i class="fas fa-redo me-1"></i> Resend Code
+                            </button>
+                            <p class="text-muted mt-2" id="cooldown-text" style="display: none;">
+                                Wait <span id="countdown" class="fw-bold">30</span>s to resend
+                            </p>
+                        </div>
+
+                        <div id="resend-message"></div>
+
+                        <p class="text-muted small mt-3">
+                            <i class="fas fa-lock me-1"></i> Code is valid for 5 minutes
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration for JavaScript -->
+<div id="otp-config"
+     data-expiry-seconds="{{ expiry_seconds|default:300 }}"
+     data-resend-url="{% url resend_action_url|default:'auth:resend_email_otp' %}"
+     data-csrf-token="{{ csrf_token }}"
+     style="display:none"></div>
+
+<script>
+// ======== OTP Split Input Logic ========
+const digitInputs = document.querySelectorAll('.otp-digit');
+const hiddenInput = document.getElementById('id_otp_code');
+const otpConfig = document.getElementById('otp-config');
+
+// Update hidden field whenever any digit changes
+function updateHiddenField() {
+    let code = '';
+    digitInputs.forEach(input => {
+        code += input.value;
+        if (input.value) {
+            input.classList.add('filled');
+        } else {
+            input.classList.remove('filled');
+        }
+    });
+    hiddenInput.value = code;
+
+    // Auto-submit when all 6 digits entered
+    if (code.length === 6) {
+        document.getElementById('otp-form').submit();
+    }
+}
+
+digitInputs.forEach((input, index) => {
+    // Handle typed input
+    input.addEventListener('input', function(e) {
+        const val = this.value.replace(/[^0-9]/g, '');
+        this.value = val.slice(0, 1); // only keep first digit
+        this.classList.remove('error');
+
+        if (val && index < digitInputs.length - 1) {
+            digitInputs[index + 1].focus();
+        }
+        updateHiddenField();
+    });
+
+    // Handle backspace
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace') {
+            if (!this.value && index > 0) {
+                digitInputs[index - 1].focus();
+                digitInputs[index - 1].value = '';
+                digitInputs[index - 1].classList.remove('filled');
+            }
+            this.classList.remove('filled');
+            updateHiddenField();
+        }
+        // Allow left/right arrow navigation
+        if (e.key === 'ArrowLeft' && index > 0) digitInputs[index - 1].focus();
+        if (e.key === 'ArrowRight' && index < digitInputs.length - 1) digitInputs[index + 1].focus();
+    });
+
+    // Handle paste
+    input.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+        for (let i = 0; i < Math.min(paste.length, 6); i++) {
+            if (digitInputs[i]) {
+                digitInputs[i].value = paste[i];
+                digitInputs[i].classList.add('filled');
+                digitInputs[i].classList.remove('error');
+            }
+        }
+        const nextEmpty = Math.min(paste.length, 5);
+        digitInputs[nextEmpty].focus();
+        updateHiddenField();
+    });
+});
+
+// Auto-focus first digit on load
+document.addEventListener('DOMContentLoaded', function() {
+    digitInputs[0].focus();
+});
+
+// ======== Timer & Progress Bar ========
+const totalSeconds = parseInt(otpConfig.dataset.expirySeconds, 10) || 300;
+let timeLeft = totalSeconds;
+const timerElement = document.getElementById('otp_timer');
+const progressBar = document.getElementById('otp-progress-bar');
+const timerBadge = document.getElementById('timer-badge');
+
+function updateTimer() {
+    if (timeLeft <= 0) {
+        timerElement.textContent = 'Expired';
+        timerBadge.className = 'timer-badge danger';
+        progressBar.style.width = '0%';
+        progressBar.className = 'otp-progress-bar danger';
+        // Disable inputs
+        digitInputs.forEach(i => { i.disabled = true; i.classList.add('error'); });
+        return;
+    }
+    timeLeft--;
+    const mins = Math.floor(timeLeft / 60);
+    const secs = timeLeft % 60;
+    timerElement.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    // Update progress bar
+    const pct = (timeLeft / totalSeconds) * 100;
+    progressBar.style.width = pct + '%';
+    if (pct > 50) {
+        progressBar.className = 'otp-progress-bar';
+        timerBadge.className = 'timer-badge safe';
+    } else if (pct > 20) {
+        progressBar.className = 'otp-progress-bar warning';
+        timerBadge.className = 'timer-badge warning';
+    } else {
+        progressBar.className = 'otp-progress-bar danger';
+        timerBadge.className = 'timer-badge danger';
+    }
+}
+
+if (timerElement) {
+    setInterval(updateTimer, 1000);
+}
+
+// ======== AJAX Resend OTP ========
+let canResend = true;
+let countdownInterval = null;
+
+function resendOTP() {
+    if (!canResend) return;
+
+    const resendBtn = document.getElementById('resend-btn');
+    const messageDiv = document.getElementById('resend-message');
+    const cooldownText = document.getElementById('cooldown-text');
+    const countdownSpan = document.getElementById('countdown');
+
+    resendBtn.disabled = true;
+    resendBtn.innerHTML = '<span class="loading-spinner"></span> Sending...';
+
+    fetch(otpConfig.dataset.resendUrl, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': otpConfig.dataset.csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            messageDiv.innerHTML = '<div class="alert alert-success fade-in py-2">' + data.message + '</div>';
+            // Reset timer
+            timeLeft = 300;
+            timerElement.textContent = '5:00';
+            progressBar.style.width = '100%';
+            progressBar.className = 'otp-progress-bar';
+            timerBadge.className = 'timer-badge safe';
+            // Clear inputs
+            digitInputs.forEach(i => { i.value = ''; i.classList.remove('filled', 'error'); i.disabled = false; });
+            digitInputs[0].focus();
+            hiddenInput.value = '';
+
+            // Start 30-second cooldown
+            canResend = false;
+            let countdown = 30;
+            cooldownText.style.display = 'block';
+            resendBtn.innerHTML = '<i class="fas fa-clock me-1"></i> Wait...';
+
+            countdownInterval = setInterval(() => {
+                countdown--;
+                countdownSpan.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    canResend = true;
+                    resendBtn.disabled = false;
+                    resendBtn.innerHTML = '<i class="fas fa-redo me-1"></i> Resend Code';
+                    cooldownText.style.display = 'none';
+                }
+            }, 1000);
+        } else {
+            messageDiv.innerHTML = '<div class="alert alert-danger fade-in py-2">' + data.error + '</div>';
+            resendBtn.disabled = false;
+            resendBtn.innerHTML = '<i class="fas fa-redo me-1"></i> Resend Code';
+        }
+    })
+    .catch(error => {
+        messageDiv.innerHTML = '<div class="alert alert-danger fade-in py-2">Error sending OTP. Please try again.</div>';
+        resendBtn.disabled = false;
+        resendBtn.innerHTML = '<i class="fas fa-redo me-1"></i> Resend Code';
+    });
+}
+</script>
+{% endblock %}
