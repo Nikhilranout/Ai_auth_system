@@ -67,3 +67,4 @@ nosetests.xml
 *.bak
 *.tmp
 *.temp
+ai_auth_system/
