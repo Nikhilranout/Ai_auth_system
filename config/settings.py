@@ -10,19 +10,15 @@ from datetime import timedelta
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables from .env file
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    try:
-        from dotenv import load_dotenv
-    except ImportError:
-        load_dotenv = None
-
-if load_dotenv is not None:
-    env_file = BASE_DIR / '.env'
-    if env_file.exists():
-        load_dotenv(env_file)
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    for line in env_file.read_text(encoding='utf-8').splitlines():
+        stripped_line = line.strip()
+        if not stripped_line or stripped_line.startswith('#') or '=' not in stripped_line:
+            continue
+        key, value = stripped_line.split('=', 1)
+        cleaned_value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key.strip(), cleaned_value)
 
 # Secret key - loaded from environment variable
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-ai-behavioral-auth-dev-key-change-in-production')
