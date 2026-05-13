@@ -21,7 +21,7 @@ if env_file.exists():
         os.environ.setdefault(key.strip(), cleaned_value)
 
 # Secret key - loaded from environment variable
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-ai-behavioral-auth-dev-key-change-in-production')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me')
 
 # Security - Set to False in production with proper DEBUG mode
 DEBUG = True
@@ -164,12 +164,12 @@ IP_RATE_LIMIT = int(os.getenv('IP_RATE_LIMIT', '20'))  # max login attempts per 
 IP_RATE_LIMIT_WINDOW = 3600  # seconds (1 hour)
 
 # For production SMTP:
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'ranoutnikhil987@gmail.com')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'cglj lweq hwhe oqmm')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'noreply@aiauth.local')
 
 # Machine Learning settings
