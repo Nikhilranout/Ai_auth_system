@@ -34,8 +34,17 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me')
 
 # Security - Set DEBUG via environment in production
 DEBUG = env_bool('DEBUG', False)
-ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', '*')
 CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS')
+render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME', '').strip()
+
+if render_hostname:
+    if render_hostname not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(render_hostname)
+
+    render_origin = f'https://{render_hostname}'
+    if render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(render_origin)
 
 # SECURITY SETTINGS
 SECURE_BROWSER_XSS_FILTER = True
