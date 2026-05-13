@@ -6,6 +6,7 @@ Production-ready configuration.
 import os
 from pathlib import Path
 from datetime import timedelta
+from urllib.parse import urlparse
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +29,24 @@ def env_bool(name, default=False):
 def env_list(name, default=''):
     value = os.getenv(name, default)
     return [item.strip() for item in value.split(',') if item.strip()]
+
+
+def build_database_config(database_url):
+    parsed = urlparse(database_url)
+
+    if parsed.scheme not in {'postgres', 'postgresql'}:
+        raise ValueError(f'Unsupported DATABASE_URL scheme: {parsed.scheme}')
+
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': parsed.path.lstrip('/'),
+        'USER': parsed.username or '',
+        'PASSWORD': parsed.password or '',
+        'HOST': parsed.hostname or '',
+        'PORT': str(parsed.port or '5432'),
+        'CONN_MAX_AGE': 600,
+        'OPTIONS': {'sslmode': 'require'} if not DEBUG else {},
+    }
 
 # Secret key - loaded from environment variable
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me')
@@ -110,13 +129,20 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database - SQLite3
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database
+DATABASE_URL = os.getenv('DATABASE_URL', '').strip()
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': build_database_config(DATABASE_URL)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
