@@ -36,10 +36,8 @@ env/
 # Django
 *.log
 local_settings.py
-/media
-/staticfiles
-/static
-db.sqlite3
+
+
 
 # Environment variables
 .env
@@ -47,7 +45,7 @@ db.sqlite3
 .env.*.local
 
 # ML Models
-/ml/models/
+
 *.pkl
 
 # OS
@@ -67,4 +65,4 @@ nosetests.xml
 *.bak
 *.tmp
 *.temp
-ai_auth_system/
+
